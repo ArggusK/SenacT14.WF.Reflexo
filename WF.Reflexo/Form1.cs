@@ -97,8 +97,11 @@ namespace WF.Reflexo
         private void btnTargetClick(object sender, EventArgs e)
         {
             clickCount++;
+
             int novaLarguraBotao = btnTarget.Size.Width - 10;
             int novaAlturaBotao = btnTarget.Size.Height - 10;
+
+            btnTarget.Size = new Size(novaLarguraBotao, novaAlturaBotao);
 
             if (btnTarget.BackColor == Color.Yellow)
             {
