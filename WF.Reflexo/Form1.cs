@@ -1,5 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace WF.Reflexo
 {
@@ -12,7 +17,7 @@ namespace WF.Reflexo
         private Random random;
         private Stopwatch stopwatch;
         private int clickCount;
-        private Label label;
+        private Label lblPlacar;
         List<Color> cores = new List<Color>() { Color.Blue, Color.Red, Color.Brown };
         private List<double> ultimosTempos = new List<double>();
         private double melhorTempo = double.MaxValue;
@@ -20,7 +25,6 @@ namespace WF.Reflexo
         public Form1()
         {
             InitializeComponent();
-            // determina o titulo da tela
             this.Text = "reflex";
             this.Size = new Size(400, 400);
             this.StartPosition = FormStartPosition.CenterParent;
@@ -32,7 +36,6 @@ namespace WF.Reflexo
             };
 
             btnStart.Click += StartGame;
-
             this.Controls.Add(btnStart);
 
             this.btnTarget = new Button()
@@ -42,8 +45,6 @@ namespace WF.Reflexo
                 Visible = false,
             };
             btnTarget.Click += btnTargetClick;
-
-            // adciona o botao na tela, mas oculto
             this.Controls.Add(btnTarget);
 
             timer = new System.Windows.Forms.Timer();
@@ -56,12 +57,12 @@ namespace WF.Reflexo
             random = new Random();
             stopwatch = new Stopwatch();
 
-            label = new Label();
-            label.Text = "...";
-            label.Location = new Point(50, 50);
-            label.Size = new Size(60, 140);
-            label.Visible = true;
-            this.Controls.Add(label);
+            lblPlacar = new Label();
+            lblPlacar.Text = "...";
+            lblPlacar.Location = new Point(50, 50);
+            lblPlacar.Size = new Size(60, 140);
+            lblPlacar.Visible = true;
+            this.Controls.Add(lblPlacar);
         }
 
         private void StartGame(object sender, EventArgs e)
@@ -72,7 +73,6 @@ namespace WF.Reflexo
 
         private void StartNewRound()
         {
-            // determina um timer aleatorio entre 1 e 3 segundos
             timer.Interval = random.Next(1000, 3000);
             timer.Start();
         }
@@ -84,73 +84,83 @@ namespace WF.Reflexo
             int y = random.Next(50, this.ClientSize.Height - 70);
             btnTarget.Location = new Point(x, y);
 
-
             btnTarget.Visible = true;
             stopwatch.Restart();
             clickCount = 0;
 
             colorTimer.Start();
-
             ChangeButtonColor();
         }
 
         private void btnTargetClick(object sender, EventArgs e)
         {
-            clickCount++;
-
-            int novaLarguraBotao = btnTarget.Size.Width - 10;
-            int novaAlturaBotao = btnTarget.Size.Height - 10;
-
-            btnTarget.Size = new Size(novaLarguraBotao, novaAlturaBotao);
-
             if (btnTarget.BackColor == Color.Yellow)
             {
                 clickCount++;
 
                 if (clickCount == 2)
                 {
-                    stopwatch.Stop();
-                    btnTarget.Visible = false;
-                    long tempoAtual = stopwatch.ElapsedMilliseconds;
+                    int novaLarguraBotao = btnTarget.Size.Width - 10;
+                    int novaAlturaBotao = btnTarget.Size.Height - 10;
+                    btnTarget.Size = new Size(novaLarguraBotao, novaAlturaBotao);
 
-
-                    // atualiza o melhor tempo se necessário
-                    if (tempoAtual < melhorTempo)
+                    if (novaAlturaBotao <= 20 && novaLarguraBotao <= 20)
                     {
-                        melhorTempo = tempoAtual;
+                        MessageBox.Show("Fim de Jogo");
+                        btnStart.Enabled = true;
+                        btnStart.Visible = true;
+                        lblPlacar.Text = "...";
+                        stopwatch.Stop();
+                        timer.Stop();
+                        btnTarget.Size = new Size(100, 100);
                     }
-
-                    // mantém apenas os últimos 5 tempos na lista
-                    ultimosTempos.Add(tempoAtual);
-                    if (ultimosTempos.Count > 5)
+                    else
                     {
-                        ultimosTempos.RemoveAt(0);
+                        stopwatch.Stop();
+                        btnTarget.Visible = false;
+                        long tempoAtual = stopwatch.ElapsedMilliseconds;
+
+                        if (tempoAtual < melhorTempo)
+                        {
+                            melhorTempo = tempoAtual;
+                        }
+
+                        ultimosTempos.Add(tempoAtual);
+                        if (ultimosTempos.Count > 5)
+                        {
+                            ultimosTempos.RemoveAt(0);
+                        }
+
+                        string pontuacaoTexto = "";
+                        foreach (double ultimoTempo in ultimosTempos)
+                        {
+                            pontuacaoTexto += $"{ultimoTempo} ms\n";
+                        }
+                        lblPlacar.Text = pontuacaoTexto;
+
+                        double media = ultimosTempos.Any() ? ultimosTempos.Average() : 0;
+
+                        string mensagem = $"Tempo atual: {tempoAtual}ms\n\n" +
+                                          $"Melhor tempo: {melhorTempo}ms\n\n" +
+                                          $"Média dos últimos 5: {media:F1}ms";
+
+                        MessageBox.Show(mensagem, "Resultado");
+                        Task.Delay(500).ContinueWith(_ => StartNewRound(), TaskScheduler.FromCurrentSynchronizationContext());
                     }
-
-                    string pontuacaoTexto = "";
-                    foreach(double ultimoTempo in ultimosTempos)
-                    {
-                        pontuacaoTexto += $" {ultimoTempo} ms \n";
-                    }
-                    label.Text = pontuacaoTexto;
-
-                    // calcula a média dos tempos
-                    double media = ultimosTempos.Any() ? ultimosTempos.Average() : 0;
-
-                    // exibe o resultado
-                    string mensagem = $"Tempo atual: {tempoAtual}ms\n\n" +
-                                       $"Melhor tempo: {melhorTempo}ms\n\n" +
-                                       $"Média dos últimos 5: {media:F1}ms";
-
-                    MessageBox.Show(mensagem, "Resultado");
-                    Task.Delay(500).ContinueWith(_ => StartNewRound(), TaskScheduler.FromCurrentSynchronizationContext());
+                    clickCount = 0;
                 }
+            }
+            else
+            {
+                MessageBox.Show("Cor errada!", "Erro");
+                btnTarget.Visible = false;
+                colorTimer.Stop();
+                StartNewRound();
             }
         }
 
         private void ChangeButtonColor()
         {
-            // 50% de chance por algum motivo
             if (random.Next(2) == 0)
             {
                 btnTarget.BackColor = Color.Yellow;
